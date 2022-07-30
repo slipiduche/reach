@@ -2,12 +2,6 @@
 const [isFortune, MONEY, HEALTH, DIE] = makeEnum(3)
 const [isDesition, TRUE, FALSE] = makeEnum(2)
 
-// forAlice(
-//   UInt, fortune =>
-//   assert(isFortune(fortune)))
-// forall(
-//   UInt, desition =>
-//   assert(isDesition(desition)))
 const Player = {
   ...hasRandom,
   informTimeout: Fun([], Null)
@@ -35,20 +29,42 @@ export const main = Reach.App(() => {
   )
   Alice.publish(amount, deadline)
     .pay(amount)
-
   commit();
-  // The second one to publish always attaches
-  Bob.only(() => {
-    const fortune = declassify(interact.readFortune())
+
+  Bob.publish()
+  
+  // // The second one to publish always attaches
+  var accepted = FALSE
+  invariant(balance() == amount)
+  while (accepted == FALSE) {
+    commit()
+    Bob.only(() => {
+      const fortune = declassify(interact.readFortune())
+    }
+    )
+    Bob.publish(fortune);
+    commit()
+    Alice.only(() => {
+      const desition = declassify(interact.decide(fortune))
+    })
+    Alice.publish(desition)
+    accepted = desition
+    continue
   }
-  )
-  Bob.publish(fortune);
-  commit()
-  Alice.only(() => {
-    const desition = declassify(interact.decide(fortune))
-  }
-  )
-  Alice.publish(desition)
+
+
+  //commit()
+  // Bob.only(() => {
+  //   const fortune = declassify(interact.readFortune())
+  // }
+  // )
+  // Bob.publish(fortune);
+  // commit()
+  // Alice.only(() => {
+  //   const desition = declassify(interact.decide(fortune))
+  // })
+  // Alice.publish(desition)
+
   transfer(amount).to(Bob);
   commit();
   // write your program here

@@ -6,6 +6,10 @@ const startingBalance = stdlib.parseCurrency(100);
 
 const [accAlice, accBob] =
     await stdlib.newTestAccounts(2, startingBalance);
+    const fmt = (x) => stdlib.formatCurrency(x, 4);
+const getBalance = async (who) => fmt(await stdlib.balanceOf(who));
+const beforeAlice = await getBalance(accAlice);
+const beforeBob = await getBalance(accBob);
 console.log('Hello, Alice and Bob!');
 
 console.log('Launching...');
@@ -45,5 +49,8 @@ await Promise.all([
     }),
 ]);
 
-
+const afterAlice = await getBalance(accAlice);
+const afterBob = await getBalance(accBob);
+console.log(`Alice went from ${beforeAlice} to ${afterAlice}.`);
+console.log(`Bob went from ${beforeBob} to ${afterBob}.`);
 console.log('Goodbye, Alice and Bob!');
