@@ -21,6 +21,11 @@ export const main = Reach.App(() => {
     readFortune: Fun([], UInt)
   });
   init();
+  const informTimeout = () => {
+    each([Alice, Bob], () => {
+      interact.informTimeout()
+    });
+  }
   // The first one to publish deploys the contract
   Alice.only(() => {
     const amount = declassify(interact.amount)
@@ -31,8 +36,10 @@ export const main = Reach.App(() => {
     .pay(amount)
   commit();
 
-  Bob.publish()
-  
+  Bob.publish().timeout(relativeTime(deadline), () => closeTo(
+    Alice, informTimeout
+  ))
+
   // // The second one to publish always attaches
   var accepted = FALSE
   invariant(balance() == amount)
@@ -42,12 +49,16 @@ export const main = Reach.App(() => {
       const fortune = declassify(interact.readFortune())
     }
     )
-    Bob.publish(fortune);
+    Bob.publish(fortune).timeout(relativeTime(deadline), () => closeTo(
+      Alice, informTimeout
+    ));
     commit()
     Alice.only(() => {
       const desition = declassify(interact.decide(fortune))
     })
-    Alice.publish(desition)
+    Alice.publish(desition).timeout(relativeTime(deadline), () => closeTo(
+      Bob, informTimeout
+    ))
     accepted = desition
     continue
   }
