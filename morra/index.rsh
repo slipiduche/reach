@@ -23,6 +23,7 @@ forall(UInt, fingersA =>
       assert(winner(fingersA, fingersB, guess, guess) == DRAW))));
 
 const Player = {
+  ...hasRandom,
   getFingers: Fun([], UInt),
   getGuess: Fun([], UInt),
   seeOutcome: Fun([UInt], Null),
@@ -61,25 +62,47 @@ export const main = Reach.App(() => {
   B.pay(wager).timeout(relativeTime(deadline), () => closeTo(
     A, informTimeout
   ))
-  commit()
-  A.only(() => {
-    const aFingers = declassify(interact.getFingers())
-    const aGuess = declassify(interact.getGuess())
-  })
-  A.publish(aFingers, aGuess).timeout(relativeTime(deadline), () => closeTo(
-    B, informTimeout
-  ));
-  commit();
-  // The second one to publish always attaches
-  B.only(() => {
-    const bFingers = declassify(interact.getFingers())
-    const bGuess = declassify(interact.getGuess())
-  })
-  B.publish(bFingers, bGuess).timeout(relativeTime(deadline), () => closeTo(
-    A, informTimeout
-  ));
-  const outcome = winner(aFingers, bFingers, aGuess, bGuess)
-  transfer(2 * wager).to(B);//transfer(2 * wager).to(outcome == A_WINS ? Alice : Bob);
+  var outcome = DRAW;
+  invariant(balance() == 2 * wager && isOutcome(outcome))
+  while (outcome == DRAW) {
+    commit()
+    A.only(() => {
+      const _aFingers = interact.getFingers()
+      const _aGuess = interact.getGuess()
+      const [_commitAFingers, _saltAFingers] = makeCommitment(interact, _aFingers)
+      const [_commitAGuess, _saltAGuess] = makeCommitment(interact, _aGuess)
+      const commitAFingers = declassify(_commitAFingers)
+      const commitAGuess = declassify(_commitAGuess)
+    })
+    A.publish(commitAFingers, commitAGuess).timeout(relativeTime(deadline), () => closeTo(
+      B, informTimeout
+    ));
+    commit();
+    // The second one to publish always attaches
+    unknowable(B, A(_aFingers, _saltAFingers))
+    unknowable(B, A(_aGuess, _saltAGuess))
+    B.only(() => {
+      const bFingers = declassify(interact.getFingers())
+      const bGuess = declassify(interact.getGuess())
+    })
+    B.publish(bFingers, bGuess).timeout(relativeTime(deadline), () => closeTo(
+      A, informTimeout
+    ));
+    commit()
+    A.only(() => {
+      const aFingers = declassify(_aFingers)
+      const aGuess = declassify(_aGuess)
+      const saltAFingers = declassify(_saltAFingers)
+      const saltAGuess = declassify(_saltAGuess)
+    })
+    A.publish(saltAFingers, saltAGuess, aFingers, aGuess)
+    checkCommitment(commitAFingers, saltAFingers, aFingers)
+    checkCommitment(commitAGuess, saltAGuess, aGuess)
+    outcome = winner(aFingers, bFingers, aGuess, bGuess)
+    continue
+  }
+
+  transfer(2 * wager).to(outcome == A_WINS ? A : B);
   commit();
 
 
